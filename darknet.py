@@ -6,6 +6,15 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np 
 
+class EmptyLayer(nn.Module):
+	def __init__(self):
+		super(EmptyLayer, self).__init__()
+
+class DetectionLayer(nn.Module):
+	def __init__(self, anchors):
+		super(DetectionLayer, self).__init__()
+		self.anchors = anchors
+
 def parse_cfg(cfgfile):
 	"""
 
@@ -139,5 +148,26 @@ def parse_cfg(cfgfile):
 				else:
 					filters = output_filters[index + start]
 
-				shortcut corresponds to skip connection
+			# shortcut corresponds to skip connection
+			elif x["type"] == "shortcut":
+				shortcut = EmptyLayer()
+				module.add_module("shortcut_{}".format(index), shortcut)
 
+			# Yolo is the detection layer
+			elif x["type"] == "yolo":
+				mask = x["mask"].split(",")
+				mask = [int(x) for x in mask]
+
+				anchors = x["anchors"].split(",")
+				anchors = [int(a) for a in anchors]
+				anchors = [(anchors[i], anchors[i+1]) for i in range(0, len(anchors),2)]
+				anchors = [anchors[i] for i in mask]
+
+				detection = DetectionLayer(anchors)
+				module.add_module("Detection_{}".format(index), detection)
+
+			module_list.append(module)
+			prev_filters = filters
+			output_filters.append(filters)
+
+		return
