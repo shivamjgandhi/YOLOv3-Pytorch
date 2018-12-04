@@ -5,6 +5,18 @@ import torch.nn as nn
 import torch.nn.functional as F 
 from torch.autograd import Variable
 import numpy as np 
+from util import *
+
+
+# This function gets the test input
+def get_test_input():
+	img = cv2.imread("dog-cycle-car.png")
+	img = cv2.resize(img, (416, 416))
+	img_ = img[:,:,::-1].transpose((2,0,1))
+	img_ = img_[np.newaxis,:,:,:]/255.0
+	img_ = torch.from_numpy(img_).float()
+	img_ = Variable(img_)
+	return img_
 
 class EmptyLayer(nn.Module):
 	def __init__(self):
@@ -33,7 +45,9 @@ class Darknet(nn.Module):
 
 	def forward(self, x, CUDA):
 		modules = self.blocks[1:]
-		output = {} # We cache the outputs for the route layer
+		outputs = {} # We cache the outputs for the route layer
+		# Write flag used to indiate whether we've encountered the first
+		# detection or not. If 1, then concatenate new detections
 		write = 0
 		for i, module in enumerate(modules):
 			module_type = (module["type"])
@@ -62,6 +76,28 @@ class Darknet(nn.Module):
 			elif module_type == "shortcut":
 				from_ = int(module["from"])
 				x = outputs[i-1] + outputs[i+from_]
+
+			elif module_type == 'yolo':
+
+				anchors = self.module_list[i][0].anchors
+				# Get the input dimensions
+				inp_dim = int (self.net_info["height"])
+
+				# Get the number of classes
+				num_classes = int (module["classes"])
+
+				# Transform
+				x = x.data
+				x = predict_transform(x, inp_dim, anchors, num_classes, CUDA)
+				if not write: 
+					detections = x
+					write = 1
+
+				else:
+					detections = torch.cat((detections, x), 1)
+		
+			outputs[i] = x
+		return detections
 
 def parse_cfg(cfgfile):
 	"""
@@ -231,3 +267,8 @@ def create_modules(blocks):
 
 blocks = parse_cfg("cfg/yolov3.cfg")
 print(create_modules(blocks))
+
+model = Darknet("cfg/yolov3.cfg")
+inp = get_test_input()
+pred = model(inp, torch.cuda.is_available())
+print(pred)
