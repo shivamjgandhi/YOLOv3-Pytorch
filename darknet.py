@@ -12,6 +12,7 @@ from util import *
 def get_test_input():
 	img = cv2.imread("dog-cycle-car.png")
 	img = cv2.resize(img, (416, 416))
+	# [:,:,::-1] reverses a list from the last dimension
 	img_ = img[:,:,::-1].transpose((2,0,1))
 	img_ = img_[np.newaxis,:,:,:]/255.0
 	img_ = torch.from_numpy(img_).float()
@@ -25,6 +26,7 @@ class EmptyLayer(nn.Module):
 class DetectionLayer(nn.Module):
 	def __init__(self, anchors):
 		super(DetectionLayer, self).__init__()
+		# anchors are boxes to do the detection on (full grid)
 		self.anchors = anchors
 
 class Darknet(nn.Module):
@@ -44,6 +46,7 @@ class Darknet(nn.Module):
 	"""
 
 	def forward(self, x, CUDA):
+		# forget about the first block since that just describes the net
 		modules = self.blocks[1:]
 		outputs = {} # We cache the outputs for the route layer
 		# Write flag used to indiate whether we've encountered the first
@@ -53,6 +56,7 @@ class Darknet(nn.Module):
 			module_type = (module["type"])
 
 			if module_type == "convolutional" or module_type == "upsample":
+				# here x is a tensor that is being fed forward and 
 				x = self.module_list[i](x)
 
 			elif module_type == "route":
