@@ -269,6 +269,32 @@ def create_modules(blocks):
 
 	return (net_info, module_list)
 
+# This is a function that loads in weights
+def load_weights(self, weightfile):
+	# Open the weights file
+	fp = open(weightfile, "rb")
+
+	# The first 5 values are header information
+	header = np.fromfile(fp, dtype = np.int32, count = 5)
+	self.header = torch.from_numpy(header)
+	self.seen = self.header[3]
+	weights = np.fromfile(fp, dtype = np.float32)
+
+	ptr = 0
+	for i in range(len(self.module_list)):
+		module_type = self.blocks[i + 1]["type"]
+
+		if module_type == "convolutional":
+			model = self.module_list[i]
+			try:
+				batch_normalize = int(self.blocks[i+1]["batch_normalize"])
+			except:
+				batch_normalize = 0
+
+			conv = model[0]
+
+		
+
 blocks = parse_cfg("cfg/yolov3.cfg")
 print(create_modules(blocks))
 
