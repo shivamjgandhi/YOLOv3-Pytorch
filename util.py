@@ -77,3 +77,60 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA = True):
 	prediction[:,:,:4] *= stride
 
 	return prediction
+
+# We need a function that outputs objectness scores and
+# non-maximal suppression
+
+def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
+	# For every bounding box having an objectness score below a threshold.
+	# we set the value of its every attributes to zero
+	conf_mask = (prediction[:,:,4] > confidence).float().unsqueeze(2)
+	prediction = prediction*conf_mask
+
+	"""
+	What is intersection over union?
+
+	Ans: evaluation metric used to measure the accuracy of an object detector
+	on a particular dataset. IoU = (Area of overlap)/(Area of Union)
+	"""
+
+	box_corner = prediction.new(prediction.shape)
+	box_corner[:,:,0] = (prediction[:,:,0] - prediction[:,:,2]/2)
+	box_corner[:,:,1] = (prediction[:,:,1] - prediction[:,:,3]/2)
+	box_corner[:,:,2] = (prediction[:,:,0] + prediction[:,:,2]/2)
+	box_corner[:,:,3] = (prediction[:,:,1] + prediction[:,:,3]/2)
+	prediction[:,:,:4] = box_corner[:,:,:4]
+
+	batch_size = prediction.size(0)
+	write = False
+
+	for ind in range(batch_size):
+		image_pred = prediction[ind]
+
+		# Each bounding box row has 85 attributes, out of which are
+		# 80 class scores. We only want the class score with the max
+		# value. 
+
+		max_conf, max_conf_score = torch.max(image_pred[:, 5:5+num_classes], 1)
+		max_conf = max_conf.float().unsqueeze(1)
+		max_conf_score = max_conf_score.float().unsqueeze(1)
+		seq = (image_pred[:,:5], max_conf, max_conf_score)
+		image_pred = torch.cat(seq, 1)
+
+		# Get rid of the bounding box rows have object confidence less than 0
+		non_zero_ind = (torch.nonzero(image_pred[:,4]))
+		try:
+			image_pred_ = image_pred[non_zero_ind.squeeze(), :].view(-1, 7)
+		except:
+			continue
+
+		# For PyTorch 0.4 compatibility
+		# Since the above code with not raise exception for no detection
+		# as scalars are supported in PyTorch 0.4
+		if image_pred_.shape[0] == 0:
+			continue
+
+		# let's get the classes detected in an image
+		img_classes = unique(image_pred_[:,-1])
+
+		
