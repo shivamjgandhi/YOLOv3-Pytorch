@@ -78,6 +78,18 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA = True):
 
 	return prediction
 
+# There are multiple true detections of the same class so we use
+# a function called unique to get classes present in any given image
+
+def unique(tensor):
+	tensor_np = tensor.cpu().numpy()
+	unique_np = np.unique(tensor_np)
+	unique_tensor = torch.from_numpy(unique_np)
+
+	tensor_rest = tensor.new(unique_tensor.shape)
+	tensor_rest.copy_(unique_tensor)
+	return tensor_res
+
 # We need a function that outputs objectness scores and
 # non-maximal suppression
 
@@ -132,5 +144,37 @@ def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
 
 		# let's get the classes detected in an image
 		img_classes = unique(image_pred_[:,-1])
+
+		for cls in img_classes:
+			# perform NMS
+
+			cls_mask = image_pred_*(image_pred_[:,-1] == cls).float().unsqueeze(1)
+			class_mask_ind = torch.nonzero(cls_mask[:, -2]).squeeze()
+			image_pred_class = image_pred_[class_mask_ind].view(-1,7)
+
+			# sort the detections such that the entry with the maximum objectness
+			# confidence is at the top
+			conf_sort_index = torch.sort(image_pred_class[:,4], descending = True)[1]
+			image_pred_class = image_pred_class[conf_sort_index]
+			idx = image_pred_class.size(0)
+
+			for i in range(idx):
+				# Get the IOUs of all boxes that come after the one we are looking at
+				# in the loop
+				try:
+					ious = bbox_iou(image_pred_class[i].unsqueeze(0),image_pred_class[i+1:])
+				except ValueError:
+					break
+
+				except IndexError:
+					break
+
+				# Zero out all the detections that have IoU > threshhold
+				iou_mask = (ious < nms_conf).float().unsqueeze(1)
+				image_pred_class[i+1:] *= iou_mask
+
+				# Remove the non-zero entries
+				non_zero_ind = torch.nonzero(image_pred_class[:,4]).squeeze()
+				image_pred_class = image_pred_class[non_zero_ind].view(-1,7)
 
 		
