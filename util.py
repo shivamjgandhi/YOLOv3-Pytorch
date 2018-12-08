@@ -90,6 +90,23 @@ def unique(tensor):
 	tensor_rest.copy_(unique_tensor)
 	return tensor_res
 
+# This is the function bbox_iou to return the iou of two bounding boxes
+
+def bbox_iou(box1, box2):
+	# Get the coordinates of bounding boxes
+    b1_x1, b1_y1, b1_x2, b1_y2 = box1[:,0], box1[:,1], box1[:,2], box1[:,3]
+    b2_x1, b2_y1, b2_x2, b2_y2 = box2[:,0], box2[:,1], box2[:,2], box2[:,3]
+
+    # get the coordinates of the intersection rectangle
+    inter_rect_x1 = torch.max(b1_x1, b2_x1)
+    inter_rect_y1 = torch.max(b1_y1, b2_y1)
+    inter_rect_x2 = torch.min(b1_x2, b2_x2)
+    inter_rect_y2 = torch.min(b1_y2, b2_y2)
+
+    # Intersection area
+    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1 + 1, min = 0) * torch.clamp(inter_rect_y2 - inter_rect_y1 + 1, min = 0)
+
+
 # We need a function that outputs objectness scores and
 # non-maximal suppression
 
@@ -162,6 +179,8 @@ def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
 				# Get the IOUs of all boxes that come after the one we are looking at
 				# in the loop
 				try:
+					# gives the IOU (intersection over union) of the box indexed by i
+					# with all of the bounding boxes having indices higher than i
 					ious = bbox_iou(image_pred_class[i].unsqueeze(0),image_pred_class[i+1:])
 				except ValueError:
 					break
@@ -177,4 +196,25 @@ def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
 				non_zero_ind = torch.nonzero(image_pred_class[:,4]).squeeze()
 				image_pred_class = image_pred_class[non_zero_ind].view(-1,7)
 
-		
+			# The function write_resutls is supposed to output a tensor of shape
+			# Dx8 where D is the true detections in all of the images, represented by a row
+			# We don't initialize the output tensor unless we have a detection to assign it.
+			# Once it has been initialized, we concatenate subsequent detections to it.
+			batch_ind = image_pred_class.new(image_pred_class(0), 1).fill_(ind)
+			# Repeat the batch_id for as many detections of the class cls in the image
+			seq = batch_ind, image_pred_class
+
+			if not write:
+				output = torch.cat(seq, 1)
+				write = True 
+			else:
+				out = torch.cat(seq, 1)
+				output = torch.cat((output, out))
+
+			# At the end of the function we check whether output has been initialized
+			# at all or not
+
+	try:
+		return output
+	except:
+		return 0
