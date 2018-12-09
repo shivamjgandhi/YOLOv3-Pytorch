@@ -49,3 +49,7 @@ nms_thresh = float(args.nms_thresh)
 start = 0
 CUDA = torch.cuda.is_available()
 
+# These are for the files we're going to be working on
+num_classes = 80
+classes = load_classes("data/coco.names")
+

@@ -218,3 +218,11 @@ def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
 		return output
 	except:
 		return 0
+
+# load_classes is a function that returns a dict which maps the index of every class
+# to a string of its name
+
+def load_clases(namesfile):
+	fp = open(namesfile, "r")
+	names = fp.read().split("\n")[:-1]
+	return names 
