@@ -53,3 +53,44 @@ CUDA = torch.cuda.is_available()
 num_classes = 80
 classes = load_classes("data/coco.names")
 
+# Initialize the network and load weights
+
+# Set up the neural network
+print("Loading network...")
+model = Darknet(args.cfgfile)
+model.load_weights(args.weightsfile)
+print("Network successfully loaded")
+
+mode.net_info["height"] = args.reso 
+inp_dim = int(model.net_info["height"])
+assert inp_dim % 32 == 0
+assert inp_dim > 32
+
+# If there's a GPU available put the model on GPU
+if CUDA:
+	model.cuda()
+
+# Set the model in evaluation mode
+model.eval()
+
+# Read the images from the disk, or the images from a dir.
+
+read_dir = time.time()
+# Detection phase
+try:
+	imlist = [osp.join(osp.realpath(','), images, img) for img in os.listdir(images)]
+except NotADirectoryError:
+	imlist = []
+	imlist.appent(osp.join(osp.realpath('.'), images))
+except FileNotFoundError:
+	print("No file or directory with the name {}".format(images))
+	exit()
+
+# If the directory to save the detections, defined by the det flag, doesn't exist, create it
+if not os.path.exists(args.det):
+	os.makedirs(args.det)
+
+# Use OpenCV to load the images
+load_batch = time.time()
+loaded_ims = [cv2.imread(x) for x in imlist]
+
