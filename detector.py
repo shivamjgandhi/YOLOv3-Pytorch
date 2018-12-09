@@ -94,3 +94,24 @@ if not os.path.exists(args.det):
 load_batch = time.time()
 loaded_ims = [cv2.imread(x) for x in imlist]
 
+# PyTorch variables for images
+im_batches = list(map(prep_image, loaded_ims, [inp_dim for x in range(len(imlist))]))
+
+# List containing dimensions of original images
+im_dim_list = [(x.shape[1], x.shape[0]) for x in loaded_ims]
+im_dim_list = torch.FloatTensor(im_dim_list).repeat(1,2)
+
+if CUDA:
+	im_dim_list = im_dim_list.cuda()
+
+# Create the batches
+leftover = 0
+if (len(im_dim_list) % batch_size):
+	leftover = 1
+
+if batch_size != 1:
+	num_batches = len(imlist) // batch_size + leftover
+	im_batches = [torch.cat((im_batches[i*batch_size: min((i+1)*batch_size,
+		len(im_batches))])) for i in range(num_batches)]
+
+	
