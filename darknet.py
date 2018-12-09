@@ -82,7 +82,6 @@ class Darknet(nn.Module):
 				x = outputs[i-1] + outputs[i+from_]
 
 			elif module_type == 'yolo':
-
 				anchors = self.module_list[i][0].anchors
 				# Get the input dimensions
 				inp_dim = int (self.net_info["height"])
@@ -136,7 +135,6 @@ class Darknet(nn.Module):
 			
 				conv = model[0]
 				
-				
 				if (batch_normalize):
 					bn = model[1]
 		
@@ -148,13 +146,13 @@ class Darknet(nn.Module):
 					ptr += num_bn_biases
 		
 					bn_weights = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
-					ptr  += num_bn_biases
+					ptr += num_bn_biases
 		
 					bn_running_mean = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
-					ptr  += num_bn_biases
+					ptr += num_bn_biases
 		
 					bn_running_var = torch.from_numpy(weights[ptr: ptr + num_bn_biases])
-					ptr  += num_bn_biases
+					ptr += num_bn_biases
 		
 					#Cast the loaded weights into dims of model weights. 
 					bn_biases = bn_biases.view_as(bn.bias.data)

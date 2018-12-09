@@ -256,3 +256,4 @@ def prep_image(img, inp_dim):
 	img = img[:,:,::-1].tranpose((2,0,1)).copy()
 	img = torch.from_numpy(img).float().div(255.0).unsqueeze(0)
 	return img 
+	
