@@ -196,7 +196,7 @@ def write_results(prediction, confidence, num_classes, nms_conf = 0.4):
 				non_zero_ind = torch.nonzero(image_pred_class[:,4]).squeeze()
 				image_pred_class = image_pred_class[non_zero_ind].view(-1,7)
 
-			# The function write_resutls is supposed to output a tensor of shape
+			# The function write_results is supposed to output a tensor of shape
 			# Dx8 where D is the true detections in all of the images, represented by a row
 			# We don't initialize the output tensor unless we have a detection to assign it.
 			# Once it has been initialized, we concatenate subsequent detections to it.
