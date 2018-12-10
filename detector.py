@@ -226,5 +226,4 @@ print("{:25s}: {:2.3f}".format("Drawing Boxes", end - draw))
 print("{:25s}: {:2.3f}".format("Average time_per_img", (end - load_batch)/len(imlist)))
 print("----------------------------------------------------------")
 
-
 torch.cuda.empty_cache()
